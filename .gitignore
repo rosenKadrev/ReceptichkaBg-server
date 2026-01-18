@@ -6,8 +6,8 @@ node_modules
 .env.local
 .env.*.local
 
-# Sensitive configuration files
-render.yaml
+# # Sensitive configuration files
+# render.yaml
 
 # Uploads and user-generated content
 uploads/
