@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: receptichkabg-server
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        value: postgresql://postgres.vyywowzscsyjgtjwxznp:pf3BEcLwBiaz4etu@aws-1-eu-north-1.pooler.supabase.com:5432/postgres
+      - key: JWT_SECRET
+        value: HtfHCqtZQl07ABhXMfgyhpq7RobuXKDZ
+      - key: SUPABASE_URL
+        value: https://vyywowzscsyjgtjwxznp.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5eXdvd3pzY3N5amd0and4em5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MTM5MjEsImV4cCI6MjA3NDE4OTkyMX0.r5ZKM8w54cfDmWzzFCTAFuIg2ke_Kd-PxOdH5w0g8FA
+      - key: EMAIL_USER
+        value: roro.910102@gmail.com
+      - key: EMAIL_PASS
+        value: ikrlaswkhwdbclby
+      - key: FRONTEND_URL
+        value: https://receptichkabg.vercel.app
+    healthCheckPath: /
