@@ -24,8 +24,6 @@ services:
         value: ikrlaswkhwdbclby
       - key: FRONTEND_URL
         value: https://receptichkabg.vercel.app
-      - key: FRONTEND_URL
-        value: https://receptichkabg.vercel.app
       - key: SESSION_SECRET
         value: HtfHCqtZQl07ABhXMfgyhpq7RobuXKDZ
     healthCheckPath: /
