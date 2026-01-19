@@ -5,7 +5,12 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+    secure: true,
+    port: 465
 });
 
 exports.sendPasswordResetEmail = async (email, resetToken) => {
@@ -142,5 +147,13 @@ exports.sendPasswordResetEmail = async (email, resetToken) => {
         `
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+        console.log('Attempting to send email to:', email);
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully:', info.messageId);
+        return info;
+    } catch (error) {
+        console.error('Email sending failed:', error);
+        throw new Error(`Failed to send email: ${error.message}`);
+    }
 };
