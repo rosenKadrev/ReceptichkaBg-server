@@ -1,22 +1,10 @@
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-    secure: true,
-    port: 465
-});
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 exports.sendPasswordResetEmail = async (email, resetToken) => {
     const resetUrl = `${process.env.FRONTEND_URL}/password-reset?token=${resetToken}`;
 
-    const mailOptions = {
+    const msg = {
         from: process.env.EMAIL_USER,
         to: email,
         subject: 'Нулиране на парола - РецептичкаБг',
@@ -149,8 +137,7 @@ exports.sendPasswordResetEmail = async (email, resetToken) => {
 
     try {
         console.log('Attempting to send email to:', email);
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully:', info.messageId);
+        const info = await sgMail.send(msg);
         return info;
     } catch (error) {
         console.error('Email sending failed:', error);
