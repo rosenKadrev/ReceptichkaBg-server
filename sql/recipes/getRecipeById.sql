@@ -15,6 +15,15 @@ SELECT
   r.status,
   r.created_at AS "createdAt",
   r.updated_at AS "updatedAt",
+  json_build_object(
+    'averageRating', r.average_rating,
+    'ratingCount', r.rating_count,
+    'userRating', (
+      SELECT rating
+      FROM ratings
+      WHERE recipe_id = r.id AND user_id = $3
+    )
+  ) AS "rating",
   (
     SELECT COALESCE(
       json_agg(

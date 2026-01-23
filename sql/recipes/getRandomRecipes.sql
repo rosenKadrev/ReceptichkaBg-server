@@ -1,8 +1,9 @@
 WITH random_recipes AS (
-  SELECT id 
-  FROM recipes 
-  WHERE status = 'active' 
-  ORDER BY RANDOM() 
+  SELECT id
+  FROM recipes
+  WHERE status = 'active'
+    AND ($2::text IS NULL OR user_id::text != $2)
+  ORDER BY RANDOM()
   LIMIT $1
 )
 SELECT 

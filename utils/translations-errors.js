@@ -115,20 +115,23 @@ const messages = {
     'recipe.reject.error': 'Грешка при отхвърляне на рецептата.',
     'recipe.reject.not_found': 'Рецептата не е намерена.',
 
+    // Rating messages
+    'rating.add.success': 'Оценката е добавена успешно.',
+    'rating.add.error': 'Грешка при добавяне на оценка.',
+    'rating.update.success': 'Оценката е актуализирана успешно.',
+    'rating.recipe_not_found': 'Рецептата не е намерена.',
+    'rating.recipe_not_approved': 'Не можете да оценявате рецепти, които не са одобрени.',
+    'rating.own_recipe': 'Не можете да оценявате собствена рецепта.',
+    'rating.invalid_value': 'Оценката трябва да бъде между 1 и 5.',
+    'rating.required': 'Оценката е задължителна.',
+
     // Generic error messages
     'error.server': 'Възникна грешка на сървъра.',
 };
 
-/**
- * Get translated message
- * @param {string} key - Message key
- * @param {object} params - Optional parameters for string interpolation
- * @returns {string} Translated message
- */
 const t = (key, params = {}) => {
     let message = messages[key] || key;
 
-    // Replace parameters in message
     Object.keys(params).forEach(param => {
         message = message.replace(`{${param}}`, params[param]);
     });

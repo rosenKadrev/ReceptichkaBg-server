@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const fileUpload = require('../middleware/file-upload');
 const validate = require('../middleware/validation.middleware');
 const { createRecipeSchema } = require('../dto/recipe.dto');
+const { ratingSchema } = require('../dto/rating-recipe');
 
 const router = express.Router();
 
@@ -23,5 +24,6 @@ router.delete('/:id', recipesController.deleteRecipe);
 router.delete('/:id/admin-delete', recipesController.adminDeleteRecipe);
 router.post('/:id/approve', recipesController.approveRecipe);
 router.post('/:id/reject', recipesController.rejectRecipe);
+router.post('/:id/rate', validate(ratingSchema), recipesController.rateRecipe);
 
 module.exports = router;

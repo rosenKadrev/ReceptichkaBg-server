@@ -246,13 +246,10 @@ exports.getAllRecipes = async (req, res) => {
         return res.status(401).json({ message: t('access.unauthorized') });
       }
     } catch (err) {
-      if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: t('access.token_expired') });
-      }
-      return res.status(500).json({ message: t('access.token_invalid') });
+      userId = null;
     }
-
   }
+
   try {
     const {
       page,
@@ -379,6 +376,8 @@ exports.deleteRecipe = async (req, res) => {
       }
     }
 
+    await db.query('DELETE FROM ratings WHERE recipe_id = $1', [recipeId]);
+
     await db.query('DELETE FROM recipes WHERE id = $1', [recipeId]);
 
     res.status(200).json({
@@ -432,6 +431,8 @@ exports.adminDeleteRecipe = async (req, res) => {
         }
       }
     }
+
+    await db.query('DELETE FROM ratings WHERE recipe_id = $1', [recipeId]);
 
     await db.query('DELETE FROM recipes WHERE id = $1', [recipeId]);
 
@@ -495,11 +496,25 @@ exports.getMyRecipeById = async (req, res) => {
 exports.getRecipeById = async (req, res) => {
   const db = getDb();
   const recipeId = req.params.id;
+  let userId;
+  const jwt = require('jsonwebtoken');
+  const authHeader = req.get('Authorization');
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+      if (decodedToken && decodedToken.userId) {
+        userId = decodedToken.userId;
+      }
+    } catch (err) {
+      userId = null;
+    }
+  }
 
   try {
     const getRecipeByIdSql = loadSqlFile(path.join(__dirname, '../sql/recipes/getRecipeById.sql'));
-    const recipeResult = await db.query(getRecipeByIdSql, [recipeId, ['active']]);
-
+    const recipeResult = await db.query(getRecipeByIdSql, [recipeId, ['active'], userId]);
     if (recipeResult.rows.length === 0) {
       return res.status(404).json({
         message: t('recipe.byId.not_found'),
@@ -577,14 +592,14 @@ exports.updateRecipe = async (req, res) => {
     }
 
     await db.query(
-      `UPDATE recipes 
-       SET name = $1, 
-           description = $2, 
-           category_id = $3, 
-           type_of_processing_id = $4, 
-           degree_of_difficulty_id = $5, 
-           prep_time = $6, 
-           cook_time = $7, 
+      `UPDATE recipes
+       SET name = $1,
+           description = $2,
+           category_id = $3,
+           type_of_processing_id = $4,
+           degree_of_difficulty_id = $5,
+           prep_time = $6,
+           cook_time = $7,
            servings = $8,
            updated_at = NOW(),
            status = 'pending'
@@ -673,10 +688,27 @@ exports.updateRecipe = async (req, res) => {
 
 exports.getRandomRecipes = async (req, res) => {
   const db = getDb();
+  let userId;
+  const jwt = require('jsonwebtoken');
+  const authHeader = req.get('Authorization');
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+      if (decodedToken && decodedToken.userId) {
+        userId = decodedToken.userId;
+      }
+    } catch (err) {
+      userId = null;
+    }
+  }
+
   try {
     const count = parseInt(req.query.count) || 3;
     const query = loadSqlFile(path.join(__dirname, '../sql/recipes/getRandomRecipes.sql'));
-    const result = await db.query(query, [count]);
+
+    const result = await db.query(query, [count, userId]);
 
     res.status(200).json({
       message: t('recipe.random.fetch.success'),
@@ -928,6 +960,124 @@ exports.rejectRecipe = async (req, res) => {
       message: t('recipe.reject.error'),
       data: null,
       success: false,
+    });
+  }
+};
+
+exports.rateRecipe = async (req, res) => {
+  const db = getDb();
+  const userId = req.userId;
+  const recipeId = req.params.id;
+  const { rating } = req.body;
+
+  try {
+    const ratingNum = parseInt(rating);
+
+    await db.query('BEGIN');
+
+    const recipeResult = await db.query(
+      'SELECT id, user_id, status FROM recipes WHERE id = $1',
+      [recipeId]
+    );
+
+    if (recipeResult.rows.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({
+        message: t('rating.recipe_not_found'),
+        data: null,
+        success: false
+      });
+    }
+
+    const recipe = recipeResult.rows[0];
+
+    if (recipe.status !== 'active') {
+      await db.query('ROLLBACK');
+      return res.status(403).json({
+        message: t('rating.recipe_not_approved'),
+        data: null,
+        success: false
+      });
+    }
+
+    if (recipe.user_id === userId) {
+      await db.query('ROLLBACK');
+      return res.status(403).json({
+        message: t('rating.own_recipe'),
+        data: null,
+        success: false
+      });
+    }
+
+    const existingRating = await db.query(
+      'SELECT id, rating FROM ratings WHERE recipe_id = $1 AND user_id = $2',
+      [recipeId, userId]
+    );
+
+    let ratingData;
+    let isUpdate = false;
+
+    if (existingRating.rows.length > 0) {
+      const updateResult = await db.query(
+        `UPDATE ratings
+         SET rating = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE recipe_id = $2 AND user_id = $3
+         RETURNING *`,
+        [ratingNum, recipeId, userId]
+      );
+      ratingData = updateResult.rows[0];
+      isUpdate = true;
+    } else {
+      const insertResult = await db.query(
+        `INSERT INTO ratings (recipe_id, user_id, rating)
+         VALUES ($1, $2, $3)
+         RETURNING *`,
+        [recipeId, userId, ratingNum]
+      );
+      ratingData = insertResult.rows[0];
+    }
+
+    const statsResult = await db.query(
+      `SELECT
+        COALESCE(ROUND(AVG(rating)::numeric, 1), 0) as average_rating,
+        COUNT(*) as rating_count
+       FROM ratings
+       WHERE recipe_id = $1`,
+      [recipeId]
+    );
+
+    const { average_rating, rating_count } = statsResult.rows[0];
+
+    await db.query(
+      `UPDATE recipes
+       SET average_rating = $1, rating_count = $2
+       WHERE id = $3`,
+      [average_rating, rating_count, recipeId]
+    );
+
+    await db.query('COMMIT');
+
+    res.status(200).json({
+      message: isUpdate ? t('rating.update.success') : t('rating.add.success'),
+      data: {
+        userRating: ratingData.rating,
+        averageRating: parseFloat(average_rating),
+        ratingCount: parseInt(rating_count)
+      },
+      success: true
+    });
+  } catch (err) {
+    if (db) {
+      await db.query('ROLLBACK').catch(rollbackErr => {
+        console.error('Rollback error:', rollbackErr.message);
+      });
+    }
+
+    console.error(t('rating.add.error'), err.message);
+    res.status(500).json({
+      message: t('rating.add.error'),
+      data: null,
+      success: false
     });
   }
 };

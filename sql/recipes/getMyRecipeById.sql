@@ -15,6 +15,11 @@ SELECT
    r.status,
    r.created_at AS "createdAt",
    r.updated_at AS "updatedAt",
+   json_build_object(
+    'averageRating', r.average_rating,
+    'ratingCount', r.rating_count,
+    'userRating', NULL
+   ) AS "rating",
    (
      SELECT json_agg(
        json_build_object(
