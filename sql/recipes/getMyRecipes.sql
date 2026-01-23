@@ -1,4 +1,4 @@
-SELECT 
+SELECT
    r.id,
    r.user_id AS "userId",
    COALESCE(u.name, u.username) AS "createdBy",
@@ -15,6 +15,11 @@ SELECT
    r.status,
    r.created_at AS "createdAt",
    r.updated_at AS "updatedAt",
+   json_build_object(
+    'averageRating', r.average_rating,
+    'ratingCount', r.rating_count,
+    'userRating', NULL
+   ) AS "rating",
    (
      SELECT COALESCE(
        json_agg(

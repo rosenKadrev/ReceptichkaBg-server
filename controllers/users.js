@@ -411,6 +411,11 @@ exports.adminDeleteUser = async (req, res) => {
             }
         }
 
+        await dbInstance.query(
+            'DELETE FROM ratings WHERE user_id = $1',
+            [targetUserId]
+        );
+
         const deleteResult = await dbInstance.query(
             'DELETE FROM users WHERE id = $1 RETURNING id',
             [targetUserId]
