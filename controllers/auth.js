@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const crypto = require('crypto');
-const { sendPasswordResetEmail } = require('../utils/email-helper');
+const { sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email-helper');
 const { t } = require('../utils/translations-errors');
 
 exports.postLogin = async (req, res, next) => {
@@ -114,6 +114,10 @@ exports.postSignup = async (req, res, next) => {
         );
 
         const userResponse = { ...user };
+
+        sendWelcomeEmail(user.email, user.name).catch(err => {
+            console.error('Failed to send welcome email:', err);
+        });
 
         res.status(201).json({
             message: t('auth.signup.success'),
