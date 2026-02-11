@@ -125,6 +125,20 @@ const messages = {
     'rating.invalid_value': 'Оценката трябва да бъде между 1 и 5.',
     'rating.required': 'Оценката е задължителна.',
 
+    // Favorite messages
+    'favorite.fetch.success': 'Любимите рецепти са успешно заредени.',
+    'favorite.fetch.error': 'Грешка при зареждане на любимите рецепти.',
+    'favorite.add.success': 'Рецептата е добавена към любими успешно.',
+    'favorite.add.error': 'Грешка при добавяне на рецептата към любими.',
+    'favorite.remove.success': 'Рецептата е премахната от любими успешно.',
+    'favorite.remove.error': 'Грешка при премахване на рецептата от любими.',
+    'favorite.already_exists': 'Тази рецепта вече е в любимите ви.',
+    'favorite.not_found': 'Рецептата не е намерена в любимите ви.',
+    'favorite.recipe_not_found': 'Рецептата не е намерена.',
+    'favorite.recipe_not_active': 'Не можете да добавяте рецепти, които не са активни към любими.',
+    'favorite.recipes.fetch.success': 'Любимите рецепти са успешно заредени.',
+    'favorite.recipes.fetch.error': 'Грешка при зареждане на любимите рецепти.',
+
     // Generic error messages
     'error.server': 'Възникна грешка на сървъра.',
 };
