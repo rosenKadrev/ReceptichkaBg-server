@@ -111,7 +111,7 @@ exports.addRecipe = async (req, res) => {
     await db.query('COMMIT');
 
     const getRecipeByIdSql = loadSqlFile(path.join(__dirname, '../sql/recipes/getRecipeById.sql'));
-    const completeRecipe = await db.query(getRecipeByIdSql, [recipeId, ['pending']]);
+    const completeRecipe = await db.query(getRecipeByIdSql, [recipeId, ['pending'], userId]);
 
     res.status(201).json({
       message: t('recipe.create.success'),
