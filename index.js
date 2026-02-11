@@ -18,6 +18,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/recipes', require('./routes/recipes'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/articles', require('./routes/articles'));
+app.use('/api/favorites', require('./routes/favorites'));
 
 app.get('/', (req, res) => {
   res.send('РецептичкаБг backend is running!');
