@@ -317,7 +317,7 @@ exports.getAllRecipes = async (req, res) => {
     const whereClause = whereConditions.length > 0 ? ` AND ${whereConditions.join(' AND ')}` : '';
 
     const totalResult = await db.query(
-      `SELECT COUNT(*) FROM recipes r LEFT JOIN users u ON r.user_id = u.id WHERE 1=1${whereClause}`,
+      `SELECT COUNT(*) FROM recipes r LEFT JOIN users u ON r.user_id = u.id WHERE r.status = 'active'${whereClause}`,
       params
     );
 
