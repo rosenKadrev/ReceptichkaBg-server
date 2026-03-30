@@ -660,10 +660,10 @@ exports.updateRecipe = async (req, res) => {
       }
     }
 
-    await db.query('COMMIT');
-
     const getRecipeByIdSql = loadSqlFile(path.join(__dirname, '../sql/recipes/getRecipeById.sql'));
-    const updatedRecipe = await db.query(getRecipeByIdSql, [recipeId, ['pending']]);
+    const updatedRecipe = await db.query(getRecipeByIdSql, [recipeId, ['pending'], userId]);
+
+    await db.query('COMMIT');
 
     res.status(200).json({
       message: t('recipe.update.success'),
