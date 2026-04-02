@@ -47,6 +47,7 @@ Backend server for the РецептичкаБг (Bulgarian and worldwide recipes
 │   ├── articles/
 │   ├── favorites/
 │   └── recipes/
+│   └── users/
 ├── utils/                # Helper functions
 │   ├── email-helper.js
 │   ├── file-helpers.js

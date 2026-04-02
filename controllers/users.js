@@ -1,6 +1,53 @@
 const db = require('../db');
 const { uploadImage, deleteImage } = require('../utils/file-helpers');
 const { t } = require('../utils/translations-errors');
+const fs = require('fs');
+const path = require('path');
+
+const loadSqlFile = (filePath) => {
+    const fileBuffer = fs.readFileSync(filePath);
+    return fileBuffer.toString();
+};
+
+exports.getProfileById = async (req, res) => {
+    const dbInstance = db.getDb();
+    const targetUserId = req.params.id;
+    const requesterId = req.userId;
+
+    if (requesterId === targetUserId) {
+        return res.status(400).json({
+            message: t('user.profile.fetch.self_not_allowed'),
+            data: null,
+            success: false
+        });
+    }
+
+    try {
+        const getProfileByIdSql = loadSqlFile(path.join(__dirname, '../sql/users/getProfileById.sql'));
+        const result = await dbInstance.query(getProfileByIdSql, [targetUserId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: t('user.not_found'),
+                data: null,
+                success: false
+            });
+        }
+
+        return res.status(200).json({
+            message: t('user.profile.fetch.success'),
+            data: result.rows[0],
+            success: true
+        });
+    } catch (err) {
+        console.error('Error fetching profile by id:', err.message);
+        return res.status(500).json({
+            message: t('user.profile.fetch.error'),
+            data: null,
+            success: false
+        });
+    }
+};
 
 exports.updateUser = async (req, res) => {
     const userId = req.userId;

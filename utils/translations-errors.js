@@ -30,6 +30,9 @@ const messages = {
     'user.promote.error': 'Грешка при повишаване на потребителя.',
     'user.fetch.error': 'Грешка при зареждане на потребителите.',
     'user.update.error': 'Грешка при обновяване на профила.',
+    'user.profile.fetch.success': 'Профилът е успешно зареден.',
+    'user.profile.fetch.error': 'Грешка при зареждане на профила.',
+    'user.profile.fetch.self_not_allowed': 'Този профил не може да бъде зареден през този endpoint.',
 
     // Access messages
     'access.denied': 'Достъпът е отказан.',
