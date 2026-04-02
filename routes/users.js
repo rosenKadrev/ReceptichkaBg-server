@@ -7,6 +7,8 @@ const fileUpload = require('../middleware/file-upload');
 
 const router = express.Router();
 
+router.get('/profile/:id', usersController.getProfileById);
+
 // All routes in this file are protected
 router.use(authMiddleware);
 
