@@ -2,8 +2,97 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email-helper');
 const { t } = require('../utils/translations-errors');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+exports.googleLogin = async (req, res) => {
+    try {
+        const { credential } = req.body;
+
+        const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, picture } = payload;
+
+        const existingResult = await db.getDb().query(
+            `SELECT * FROM users WHERE email = $1`,
+            [email]
+        );
+
+        let userResponse;
+
+        if (existingResult.rows.length > 0) {
+            const updateResult = await db.getDb().query(
+                `UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE email = $1
+                RETURNING
+                    id, name, email, gender, username,
+                    CASE WHEN role = 'super_admin' THEN 'superAdmin' ELSE role END AS "role",
+                    avatar_url AS "avatarUrl",
+                    date_created AS "dateCreated",
+                    last_active AS "lastActive",
+                    date_of_birth AS "dateOfBirth",
+                    is_active AS "isActive"`,
+                [email]
+            );
+            userResponse = updateResult.rows[0];
+        } else {
+            const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+            let username = baseUsername;
+            let suffix = 1;
+            while (true) {
+                const taken = await db.getDb().query('SELECT id FROM users WHERE username = $1', [username]);
+                if (taken.rows.length === 0) break;
+                username = `${baseUsername}${suffix++}`;
+            }
+
+            const unusablePasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+
+            const insertResult = await db.getDb().query(
+                `INSERT INTO users(username, name, email, password, avatar_url)
+                VALUES($1, $2, $3, $4, $5)
+                RETURNING
+                    id, name, email, gender, username,
+                    CASE WHEN role = 'super_admin' THEN 'superAdmin' ELSE role END AS "role",
+                    avatar_url AS "avatarUrl",
+                    date_created AS "dateCreated",
+                    last_active AS "lastActive",
+                    date_of_birth AS "dateOfBirth",
+                    is_active AS "isActive"`,
+                [username, name, email, unusablePasswordHash, picture]
+            );
+            userResponse = insertResult.rows[0];
+
+            sendWelcomeEmail(email, name).catch(err => {
+                console.error('Failed to send welcome email:', err);
+            });
+        }
+
+        const token = jwt.sign(
+            { username: userResponse.username, userId: userResponse.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        res.status(200).json({
+            message: t('auth.google.success'),
+            data: { token, user: userResponse },
+            success: true,
+        });
+    } catch (err) {
+        console.error('Google login error:', err);
+        res.status(401).json({
+            message: t('auth.google.error'),
+            data: null,
+            success: false,
+        });
+    }
+};
 
 exports.postLogin = async (req, res, next) => {
     try {

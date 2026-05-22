@@ -6,6 +6,8 @@ const messages = {
     'auth.signup.success': 'Регистрацията е успешна.',
     'auth.signup.email_exists': 'Този имейл вече е регистриран.',
     'auth.signup.error': 'Грешка при регистрация на потребителя.',
+    'auth.google.success': 'Успешно влизане с Google.',
+    'auth.google.error': 'Грешка при влизане с Google. Моля, опитайте отново.',
 
     // Password reset messages
     'password.forgot.success': 'Ако съществува акаунт с този имейл, инструкции за възстановяване на паролата са изпратени на него.',

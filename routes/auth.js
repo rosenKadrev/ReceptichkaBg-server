@@ -10,6 +10,7 @@ const router = express.Router();
 
 router.post('/register', validate(signupSchema), authController.postSignup);
 router.post('/login', validate(loginSchema), authController.postLogin);
+router.post('/google', authController.googleLogin);
 router.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
 router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
 
