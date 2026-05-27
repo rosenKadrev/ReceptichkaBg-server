@@ -1,14 +1,46 @@
-const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const getFromEmail = () => process.env.EMAIL_USER;
+
+const sendBrevoEmail = async (to, subject, html) => {
+    const apiKey = process.env.BREVO_API_KEY;
+    const fromEmail = getFromEmail();
+    
+    if (!fromEmail) {
+        throw new Error('Sender email is missing. Set EMAIL_USER.');
+    }
+
+    const payload = {
+        to: [{ email: to }],
+        sender: { email: fromEmail, name: 'РецептичкаБг' },
+        subject: subject,
+        htmlContent: html
+    };
+
+    try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'api-key': apiKey
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`Brevo API error (${response.status}): ${errorData?.message || 'Unknown error'}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Email sending failed:', error.message);
+        throw error;
+    }
+};
 
 exports.sendPasswordResetEmail = async (email, resetToken) => {
     const resetUrl = `${process.env.FRONTEND_URL}/password-reset?token=${resetToken}`;
 
-    const msg = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Нулиране на парола - РецептичкаБг',
-        html: `
+    const html = `
             <!DOCTYPE html>
             <html>
             <head>
@@ -132,25 +164,13 @@ exports.sendPasswordResetEmail = async (email, resetToken) => {
                 </div>
             </body>
             </html>
-        `
-    };
+    `;
 
-    try {
-        console.log('Attempting to send email to:', email);
-        const info = await sgMail.send(msg);
-        return info;
-    } catch (error) {
-        console.error('Email sending failed:', error);
-        throw new Error(`Failed to send email: ${error.message}`);
-    }
+    return await sendBrevoEmail(email, 'Нулиране на парола - РецептичкаБг', html);
 };
 
 exports.sendWelcomeEmail = async (email, name) => {
-    const msg = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Добре дошли в РецептичкаБг! 🎉',
-        html: `
+    const html = `
             <!DOCTYPE html>
             <html>
             <head>
@@ -292,15 +312,7 @@ exports.sendWelcomeEmail = async (email, name) => {
                 </div>
             </body>
             </html>
-        `
-    };
+    `;
 
-    try {
-        console.log('Attempting to send email to:', email);
-        const info = await sgMail.send(msg);
-        return info;
-    } catch (error) {
-        console.error('Welcome email sending failed:', error);
-        throw new Error(`Failed to send welcome email: ${error.message}`);
-    }
+    return await sendBrevoEmail(email, 'Добре дошли в РецептичкаБг! 🎉', html);
 };

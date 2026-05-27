@@ -4,14 +4,14 @@ Backend server for the РецептичкаБг (Bulgarian and worldwide recipes
 
 ## 🚀 Features
 
-- **Authentication & Authorization** - JWT-based auth with password reset via email tokens
+- **Authentication & Authorization** - JWT-based auth with email/password and Google SSO login, plus password reset via email tokens
 - **Recipe Management** - Full CRUD for recipes with image upload, approval workflow (pending/approved/rejected)
 - **User Management** - Profile management with avatars, role-based permissions (user/admin/super_admin), user administration
 - **Articles System** - Content management for articles with categories and multi-image paragraphs (admin only)
 - **Ratings & Reviews** - User rating system for recipes with average rating calculation
 - **Favorites System** - Users can save and manage their favorite recipes
 - **File Upload** - Integration with Supabase Storage for recipe and article images
-- **Email Service** - Password reset emails via Nodemailer
+- **Email Service** - Password reset and welcome emails via Brevo API
 
 ## 📁 Project Structure
 
