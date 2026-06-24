@@ -38,7 +38,8 @@ exports.googleLogin = async (req, res) => {
                     date_created AS "dateCreated",
                     last_active AS "lastActive",
                     date_of_birth AS "dateOfBirth",
-                    is_active AS "isActive"`,
+                    is_active AS "isActive",
+                    dark_mode AS "darkMode"`,
                 [email]
             );
             userResponse = updateResult.rows[0];
@@ -78,7 +79,7 @@ exports.googleLogin = async (req, res) => {
         const token = jwt.sign(
             { username: userResponse.username, userId: userResponse.id },
             process.env.JWT_SECRET,
-            { expiresIn: '6h' }
+            { expiresIn: '1h' }
         );
 
         res.status(200).json({
