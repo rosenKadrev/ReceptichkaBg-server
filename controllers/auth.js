@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { getDb } = require('../db');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email-helper');
@@ -9,6 +9,7 @@ const { t } = require('../utils/translations-errors');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 exports.googleLogin = async (req, res) => {
+    const db = getDb();
     try {
         const { credential } = req.body;
 
@@ -20,7 +21,7 @@ exports.googleLogin = async (req, res) => {
         const payload = ticket.getPayload();
         const { email, name, picture } = payload;
 
-        const existingResult = await db.getDb().query(
+        const existingResult = await db.query(
             `SELECT * FROM users WHERE email = $1`,
             [email]
         );
@@ -28,7 +29,7 @@ exports.googleLogin = async (req, res) => {
         let userResponse;
 
         if (existingResult.rows.length > 0) {
-            const updateResult = await db.getDb().query(
+            const updateResult = await db.query(
                 `UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE email = $1
                 RETURNING
                     id, name, email, gender, username,
@@ -46,14 +47,14 @@ exports.googleLogin = async (req, res) => {
             let username = baseUsername;
             let suffix = 1;
             while (true) {
-                const taken = await db.getDb().query('SELECT id FROM users WHERE username = $1', [username]);
+                const taken = await db.query('SELECT id FROM users WHERE username = $1', [username]);
                 if (taken.rows.length === 0) break;
                 username = `${baseUsername}${suffix++}`;
             }
 
             const unusablePasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
 
-            const insertResult = await db.getDb().query(
+            const insertResult = await db.query(
                 `INSERT INTO users(username, name, email, password, avatar_url)
                 VALUES($1, $2, $3, $4, $5)
                 RETURNING
@@ -63,7 +64,8 @@ exports.googleLogin = async (req, res) => {
                     date_created AS "dateCreated",
                     last_active AS "lastActive",
                     date_of_birth AS "dateOfBirth",
-                    is_active AS "isActive"`,
+                    is_active AS "isActive",
+                    dark_mode AS "darkMode"`,
                 [username, name, email, unusablePasswordHash, picture]
             );
             userResponse = insertResult.rows[0];
@@ -76,7 +78,7 @@ exports.googleLogin = async (req, res) => {
         const token = jwt.sign(
             { username: userResponse.username, userId: userResponse.id },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '6h' }
         );
 
         res.status(200).json({
@@ -95,10 +97,11 @@ exports.googleLogin = async (req, res) => {
 };
 
 exports.postLogin = async (req, res, next) => {
+    const db = getDb();
     try {
         const { email, password } = req.body;
 
-        const userResult = await db.getDb().query('SELECT * FROM users WHERE email = $1', [email]);
+        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
 
         if (userResult.rows.length === 0) {
             return res.status(401).json({
@@ -113,7 +116,7 @@ exports.postLogin = async (req, res, next) => {
         const doMatch = await bcrypt.compare(password, user.password);
 
         if (doMatch) {
-            const updateResult = await db.getDb().query(
+            const updateResult = await db.query(
                 `UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE id = $1
                 RETURNING
                     id,
@@ -126,7 +129,8 @@ exports.postLogin = async (req, res, next) => {
                     date_created AS "dateCreated",
                     last_active AS "lastActive",
                     date_of_birth AS "dateOfBirth",
-                    is_active AS "isActive"`,
+                    is_active AS "isActive",
+                    dark_mode AS "darkMode"`,
                 [user.id]
             );
             const updatedUser = updateResult.rows[0];
@@ -161,10 +165,11 @@ exports.postLogin = async (req, res, next) => {
 };
 
 exports.postSignup = async (req, res, next) => {
+    const db = getDb();
     try {
         const { email, password, username, name, gender, dateOfBirth, avatarUrl } = req.body;
 
-        const userDoc = await db.getDb().query('SELECT * FROM users WHERE email = $1 OR username = $2', [email, username]);
+        const userDoc = await db.query('SELECT * FROM users WHERE email = $1 OR username = $2', [email, username]);
 
         if (userDoc.rows.length > 0) {
             return res.status(409).json({
@@ -189,11 +194,12 @@ exports.postSignup = async (req, res, next) => {
                     date_created AS "dateCreated",
                     last_active AS "lastActive",
                     date_of_birth AS "dateOfBirth",
-                    is_active AS "isActive"`,
+                    is_active AS "isActive",
+                    dark_mode AS "darkMode"`,
             values: [username, name, email, gender, dateOfBirth, hashedPassword, avatarUrl],
         };
 
-        const result = await db.getDb().query(query);
+        const result = await db.query(query);
         const user = result.rows[0];
 
         const token = jwt.sign(
@@ -225,10 +231,11 @@ exports.postSignup = async (req, res, next) => {
 };
 
 exports.forgotPassword = async (req, res) => {
+    const db = getDb();
     const { email } = req.body;
 
     try {
-        const userResult = await db.getDb().query('SELECT id, email FROM users WHERE email = $1', [email]);
+        const userResult = await db.query('SELECT id, email FROM users WHERE email = $1', [email]);
 
         if (userResult.rows.length === 0) {
             return res.status(200).json({
@@ -245,9 +252,9 @@ exports.forgotPassword = async (req, res) => {
 
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-        await db.getDb().query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
+        await db.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id]);
 
-        await db.getDb().query(
+        await db.query(
             'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
             [user.id, hashedToken, expiresAt]
         );
@@ -270,12 +277,13 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
+    const db = getDb();
     const { token, newPassword } = req.body;
 
     try {
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-        const tokenResult = await db.getDb().query(
+        const tokenResult = await db.query(
             `SELECT user_id, expires_at FROM password_reset_tokens 
              WHERE token = $1 AND expires_at > NOW()`,
             [hashedToken]
@@ -293,12 +301,12 @@ exports.resetPassword = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-        await db.getDb().query(
+        await db.query(
             'UPDATE users SET password = $1 WHERE id = $2',
             [hashedPassword, userId]
         );
 
-        await db.getDb().query(
+        await db.query(
             'DELETE FROM password_reset_tokens WHERE token = $1',
             [hashedToken]
         );
