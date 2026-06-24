@@ -1,4 +1,12 @@
 const messages = {
+    // General error messages
+    'error.images_only': 'Разрешени са само изображения.',
+    'error.internal': 'Вътрешна сървърна грешка.',
+
+    // Rate limit messages
+    'rateLimit.login': 'Твърде много опити за влизане. Моля, опитайте отново след малко.',
+    'rateLimit.password': 'Твърде много заявки за нулиране на парола. Моля, опитайте отново след 1 час.',
+
     // Auth messages
     'auth.login.success': 'Успешно влизане в системата.',
     'auth.login.invalid': 'Невалиден имейл или парола.',

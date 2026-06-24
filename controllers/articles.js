@@ -111,18 +111,6 @@ exports.addArticle = async (req, res) => {
   const userId = req.userId;
 
   try {
-    const userResult = await db.query('SELECT role FROM users WHERE id = $1', [userId]);
-    if (
-      userResult.rows.length === 0 ||
-      !['admin', 'super_admin'].includes(userResult.rows[0].role)
-    ) {
-      return res.status(403).json({
-        message: t('article.admin.access_denied'),
-        data: null,
-        success: false,
-      });
-    }
-
     const { name, description, category, paragraphs } = req.body;
 
     if (!name || !name.trim()) {
@@ -239,22 +227,9 @@ exports.addArticle = async (req, res) => {
 
 exports.deleteArticle = async (req, res) => {
   const db = getDb();
-  const userId = req.userId;
   const articleId = req.params.articleId;
 
   try {
-    const userResult = await db.query('SELECT role FROM users WHERE id = $1', [userId]);
-    if (
-      userResult.rows.length === 0 ||
-      !['admin', 'super_admin'].includes(userResult.rows[0].role)
-    ) {
-      return res.status(403).json({
-        message: t('article.admin.access_denied'),
-        data: null,
-        success: false,
-      });
-    }
-
     const getArticleByIdSql = loadSqlFile(path.join(__dirname, '../sql/articles/getArticleById.sql'));
     const articleResult = await db.query(getArticleByIdSql, [articleId]);
 
@@ -313,18 +288,6 @@ exports.updateArticle = async (req, res) => {
   const articleId = req.params.id;
 
   try {
-    const userResult = await db.query('SELECT role FROM users WHERE id = $1', [userId]);
-    if (
-      userResult.rows.length === 0 ||
-      !['admin', 'super_admin'].includes(userResult.rows[0].role)
-    ) {
-      return res.status(403).json({
-        message: t('article.admin.access_denied'),
-        data: null,
-        success: false,
-      });
-    }
-
     const { name, description, category, paragraphs } = req.body;
 
     if (!name || !name.trim()) {

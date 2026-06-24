@@ -1,4 +1,4 @@
-const db = require('../db');
+const { getDb } = require('../db');
 const { uploadImage, deleteImage } = require('../utils/file-helpers');
 const { t } = require('../utils/translations-errors');
 const fs = require('fs');
@@ -10,7 +10,7 @@ const loadSqlFile = (filePath) => {
 };
 
 exports.getProfileById = async (req, res) => {
-    const dbInstance = db.getDb();
+    const db = getDb();
     const targetUserId = req.params.id;
     const requesterId = req.userId;
 
@@ -24,7 +24,7 @@ exports.getProfileById = async (req, res) => {
 
     try {
         const getProfileByIdSql = loadSqlFile(path.join(__dirname, '../sql/users/getProfileById.sql'));
-        const result = await dbInstance.query(getProfileByIdSql, [targetUserId]);
+        const result = await db.query(getProfileByIdSql, [targetUserId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -50,12 +50,13 @@ exports.getProfileById = async (req, res) => {
 };
 
 exports.updateUser = async (req, res) => {
+    const db = getDb();
     const userId = req.userId;
     const { name, gender, dateOfBirth, email } = req.body;
     let oldAvatarUrl = null;
 
     try {
-        const currentUser = await db.getDb().query('SELECT avatar_url FROM users WHERE id = $1', [userId]);
+        const currentUser = await db.query('SELECT avatar_url FROM users WHERE id = $1', [userId]);
         if (currentUser.rows.length > 0) {
             oldAvatarUrl = currentUser.rows[0].avatar_url;
         }
@@ -70,7 +71,7 @@ exports.updateUser = async (req, res) => {
 
     if (email) {
         try {
-            const existingUser = await db.getDb().query(
+            const existingUser = await db.query(
                 'SELECT id FROM users WHERE email = $1 AND id != $2',
                 [email, userId]
             );
@@ -153,11 +154,12 @@ exports.updateUser = async (req, res) => {
             date_created AS "dateCreated",
             last_active AS "lastActive",
             date_of_birth AS "dateOfBirth",
-            is_active AS "isActive"
+            is_active AS "isActive",
+            dark_mode AS "darkMode"
     `;
 
     try {
-        const result = await db.getDb().query(queryString, values);
+        const result = await db.query(queryString, values);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -190,27 +192,10 @@ exports.updateUser = async (req, res) => {
 };
 
 exports.getAllUsers = async (req, res) => {
-    const db = require('../db').getDb();
+    const db = getDb();
     const userId = req.userId;
 
     try {
-        const userResult = await db.query(
-            'SELECT role FROM users WHERE id = $1',
-            [userId]
-        );
-        if (
-            userResult.rows.length === 0 ||
-            !['admin', 'super_admin'].includes(
-                userResult.rows[0].role
-            )
-        ) {
-            return res.status(403).json({
-                message: t('access.admin_only'),
-                data: null,
-                success: false,
-            });
-        }
-
         const {
             page,
             pageSize,
@@ -313,24 +298,11 @@ exports.getAllUsers = async (req, res) => {
 };
 
 exports.promoteUserToAdmin = async (req, res) => {
-    const dbInstance = db.getDb();
+    const db = getDb();
     const targetUserId = req.params.id;
-    const requesterId = req.userId;
 
     try {
-        const requester = await dbInstance.query('SELECT role FROM users WHERE id = $1', [requesterId]);
-        if (
-            requester.rows.length === 0 ||
-            requester.rows[0].role !== 'super_admin'
-        ) {
-            return res.status(403).json({
-                message: t('access.denied'),
-                data: null,
-                success: false,
-            });
-        }
-
-        const result = await dbInstance.query(
+        const result = await db.query(
             `UPDATE users SET role = 'admin' WHERE id = $1 RETURNING 
                 id, name, email, gender, role, avatar_url AS "avatarUrl", date_created AS "dateCreated"`,
             [targetUserId]
@@ -361,24 +333,11 @@ exports.promoteUserToAdmin = async (req, res) => {
 };
 
 exports.demoteAdminToUser = async (req, res) => {
-    const dbInstance = db.getDb();
+    const db = getDb();
     const targetUserId = req.params.id;
-    const requesterId = req.userId;
 
     try {
-        const requester = await dbInstance.query('SELECT role FROM users WHERE id = $1', [requesterId]);
-        if (
-            requester.rows.length === 0 ||
-            requester.rows[0].role !== 'super_admin'
-        ) {
-            return res.status(403).json({
-                message: t('access.denied'),
-                data: null,
-                success: false,
-            });
-        }
-
-        const result = await dbInstance.query(
+        const result = await db.query(
             `UPDATE users SET role = 'user' WHERE id = $1 AND role = 'admin' RETURNING 
                 id, name, email, gender, role, avatar_url AS "avatarUrl", date_created AS "dateCreated"`,
             [targetUserId]
@@ -408,16 +367,67 @@ exports.demoteAdminToUser = async (req, res) => {
     }
 };
 
-exports.adminDeleteUser = async (req, res) => {
-    const dbInstance = db.getDb();
+exports.updateDarkMode = async (req, res) => {
+    const db = getDb();
     const targetUserId = req.params.id;
     const requesterId = req.userId;
+    const { darkMode } = req.body;
+
+    if (targetUserId !== requesterId) {
+        return res.status(403).json({
+            message: t('access.denied'),
+            data: null,
+            success: false
+        });
+    }
+
+    if (typeof darkMode !== 'boolean') {
+        return res.status(400).json({
+            message: t('validation.invalid_fields'),
+            data: null,
+            success: false
+        });
+    }
 
     try {
-        const requester = await dbInstance.query('SELECT role FROM users WHERE id = $1', [requesterId]);
-        const targetUser = await dbInstance.query('SELECT role FROM users WHERE id = $1', [targetUserId]);
+        const result = await db.query(
+            `UPDATE users SET dark_mode = $1 WHERE id = $2
+             RETURNING id, dark_mode AS "darkMode"`,
+            [darkMode, requesterId]
+        );
 
-        if (requester.rows.length === 0 || targetUser.rows.length === 0) {
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: t('user.not_found'),
+                data: null,
+                success: false
+            });
+        }
+
+        return res.status(200).json({
+            message: t('user.update.success'),
+            data: result.rows[0],
+            success: true
+        });
+    } catch (err) {
+        console.error('Error updating dark mode:', err);
+        return res.status(500).json({
+            message: t('user.update.error'),
+            data: null,
+            success: false
+        });
+    }
+};
+
+exports.adminDeleteUser = async (req, res) => {
+    const db = getDb();
+    const targetUserId = req.params.id;
+    const requesterRole = req.userRole;
+
+    try {
+        const targetUser = await db.query('SELECT role FROM users WHERE id = $1', [targetUserId]);
+
+        if (targetUser.rows.length === 0) {
             return res.status(404).json({
                 message: t('user.not_found'),
                 data: null,
@@ -425,7 +435,6 @@ exports.adminDeleteUser = async (req, res) => {
             });
         }
 
-        const requesterRole = requester.rows[0].role;
         const targetRole = targetUser.rows[0].role;
 
         const canDelete =
@@ -440,7 +449,7 @@ exports.adminDeleteUser = async (req, res) => {
             });
         }
 
-        const recipeImagesResult = await dbInstance.query(
+        const recipeImagesResult = await db.query(
             `SELECT img.image_url
              FROM recipe_images img
              JOIN recipes r ON img.recipe_id = r.id
@@ -458,19 +467,19 @@ exports.adminDeleteUser = async (req, res) => {
             }
         }
 
-        await dbInstance.query(
+        await db.query(
             'DELETE FROM ratings WHERE user_id = $1',
             [targetUserId]
         );
 
-        const deleteResult = await dbInstance.query(
+        const deleteResult = await db.query(
             'DELETE FROM users WHERE id = $1 RETURNING id',
             [targetUserId]
         );
 
         if (deleteResult.rows.length === 0) {
             return res.status(404).json({
-                message: 'User not found.',
+                message: t('user.not_found'),
                 data: null,
                 success: false,
             });

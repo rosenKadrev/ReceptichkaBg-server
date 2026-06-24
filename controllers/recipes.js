@@ -357,6 +357,7 @@ exports.deleteRecipe = async (req, res) => {
 
   try {
     const getRecipeForDeleteSql = loadSqlFile(path.join(__dirname, '../sql/recipes/getRecipeForDelete.sql'));
+
     const recipeResult = await db.query(getRecipeForDeleteSql, [recipeId, userId]);
 
     if (recipeResult.rows.length === 0) {
@@ -401,18 +402,6 @@ exports.adminDeleteRecipe = async (req, res) => {
   const recipeId = req.params.id;
 
   try {
-    const userResult = await db.query('SELECT role FROM users WHERE id = $1', [userId]);
-    if (
-      userResult.rows.length === 0 ||
-      !['admin', 'super_admin'].includes(userResult.rows[0].role)
-    ) {
-      return res.status(403).json({
-        message: t('recipe.admin.access_denied'),
-        data: null,
-        success: false,
-      });
-    }
-
     const getRecipeByIdSql = loadSqlFile(path.join(__dirname, '../sql/recipes/getRecipeById.sql'));
     const recipeResult = await db.query(getRecipeByIdSql, [recipeId, ['active', 'pending', 'rejected']]);
     if (recipeResult.rows.length === 0) {
@@ -727,26 +716,8 @@ exports.getRandomRecipes = async (req, res) => {
 
 exports.getAdminRecipes = async (req, res) => {
   const db = getDb();
-  const userId = req.userId;
 
   try {
-    const userResult = await db.query(
-      'SELECT role FROM users WHERE id = $1',
-      [userId]
-    );
-    if (
-      userResult.rows.length === 0 ||
-      !['admin', 'super_admin'].includes(
-        userResult.rows[0].role
-      )
-    ) {
-      return res.status(403).json({
-        message: t('recipe.admin.access_denied'),
-        data: null,
-        success: false,
-      });
-    }
-
     const {
       page,
       pageSize,
@@ -872,18 +843,6 @@ exports.approveRecipe = async (req, res) => {
   const recipeId = req.params.id;
 
   try {
-    const userResult = await db.query('SELECT role FROM users WHERE id = $1', [userId]);
-    if (
-      userResult.rows.length === 0 ||
-      !['admin', 'super_admin'].includes(userResult.rows[0].role)
-    ) {
-      return res.status(403).json({
-        message: t('recipe.admin.access_denied'),
-        data: null,
-        success: false,
-      });
-    }
-
     const updateResult = await db.query(
       `UPDATE recipes 
        SET status = 'active', date_approved = NOW(), approved_by = $1
@@ -921,18 +880,6 @@ exports.rejectRecipe = async (req, res) => {
   const recipeId = req.params.id;
 
   try {
-    const userResult = await db.query('SELECT role FROM users WHERE id = $1', [userId]);
-    if (
-      userResult.rows.length === 0 ||
-      !['admin', 'super_admin'].includes(userResult.rows[0].role)
-    ) {
-      return res.status(403).json({
-        message: t('recipe.admin.access_denied'),
-        data: null,
-        success: false,
-      });
-    }
-
     const updateResult = await db.query(
       `UPDATE recipes 
        SET status = 'rejected', date_approved = NOW(), approved_by = $1
