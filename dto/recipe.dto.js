@@ -28,25 +28,27 @@ const instructionSchema = Joi.object({
 
 // Custom validator to handle strings that should be parsed as JSON arrays
 const jsonArrayValidator = (baseSchema) => (value, helpers) => {
-  // If it's already an array, validate directly
   if (Array.isArray(value)) {
-    return baseSchema.validate(value).value;
+    const { error, value: validated } = baseSchema.validate(value, { abortEarly: false });
+    if (error) return helpers.message(error.details.map(d => d.message).join(' '));
+    return validated;
   }
 
-  // If it's a string, try to parse it
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
       if (Array.isArray(parsed)) {
-        return baseSchema.validate(parsed).value;
+        const { error, value: validated } = baseSchema.validate(parsed, { abortEarly: false });
+        if (error) return helpers.message(error.details.map(d => d.message).join(' '));
+        return validated;
       }
-      return helpers.error('string.jsonArray', { message: 'трябва да бъде валиден JSON масив' });
+      return helpers.message('Трябва да бъде валиден JSON масив.');
     } catch (e) {
-      return helpers.error('string.jsonParse', { message: 'трябва да бъде валиден JSON' });
+      return helpers.message('Невалиден JSON формат.');
     }
   }
 
-  return helpers.error('string.base', { message: 'трябва да бъде текст или масив' });
+  return helpers.message('Трябва да бъде текст или масив.');
 };
 
 const createRecipeSchema = Joi.object({
@@ -67,14 +69,17 @@ const createRecipeSchema = Joi.object({
     'JSON array validator'
   ).required(),
   category: Joi.string().guid().required().messages({
+    'string.empty': 'Категорията е задължителна.',
     'string.guid': 'Категорията трябва да бъде валиден UUID.',
     'any.required': 'Категорията е задължителна.'
   }),
   typeOfProcessing: Joi.string().guid().required().messages({
+    'string.empty': 'Типът обработка е задължителен.',
     'string.guid': 'Типът обработка трябва да бъде валиден UUID.',
     'any.required': 'Типът обработка е задължителен.'
   }),
   degreeOfDifficulty: Joi.string().guid().required().messages({
+    'string.empty': 'Степента на трудност е задължителна.',
     'string.guid': 'Степента на трудност трябва да бъде валиден UUID.',
     'any.required': 'Степента на трудност е задължителна.'
   }),
